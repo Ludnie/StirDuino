@@ -1,2 +1,2 @@
 # StirDuino
-Arduino based magnetig stir plate
+Arduino based magnetic stir plate
