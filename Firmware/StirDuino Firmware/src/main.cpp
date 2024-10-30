@@ -19,13 +19,17 @@
 #define SCREEN_ADDRESS 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define DISPLAY_REFRESH_RATE 4 // refreshs per second
+#define DISPLAY_REFRESH_RATE 8 // refreshs per second
 
 // put function declarations here:
 void setMotor(int dir, int pwmVal, int pwm, int phase);
 void readEncoder();
 
 // globals
+int pos = 0;
+float v = 0;
+int pwr = 0;
+
 long prevT = 0;
 int posPrev = 0;
 
@@ -37,6 +41,16 @@ float vFilt = 0;
 float vPrev = 0;
 
 float eintegral = 0;
+
+const int avrgCount = 128;
+
+float vtAvrgBuffer[avrgCount];
+int vtNextAvrg = 0;
+float vtAvrg = 0;
+
+float vFiltAvrgBuffer[avrgCount];
+int vFiltNextAvrg = 0;
+float vFiltAvrg = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -60,7 +74,7 @@ void setup() {
 void loop() {
 
   for (int i = 0; i <= (CONTROLLER_REFRESH_RATE / DISPLAY_REFRESH_RATE); i++) {
-    int pos = 0;
+    pos = 0;
     // ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
     //   pos = pos_i;
     // }
@@ -74,16 +88,36 @@ void loop() {
     prevT = currT;
 
     // Convert counts/s to RPM
-    float v = velocity / 60.0 * 60.0;
+    v = velocity / 60.0 * 60.0;
 
     // Low-pass filter (25 Hz cutoff)
     vFilt = 0.854*vFilt + 0.0728*v + 0.0728*vPrev;
     vPrev = v;
 
+    vFiltAvrgBuffer[vFiltNextAvrg++] = vFilt;
+    if (vFiltNextAvrg >= avrgCount) {
+      vFiltNextAvrg = 0;
+    }
+    vFiltAvrg = 0;
+    for (int i = 0; i < avrgCount; i++) {
+      vFiltAvrg += vFiltAvrgBuffer[i];
+    }
+    vFiltAvrg /= avrgCount;
+
     // Set target velocity
     //float vt = 100*(sin(currT/1e6)>0);
     int pot = analogRead(POT);
-    vt = map(pot, 0, 1025, MIN_RPM, MAX_RPM);
+    vt = map(pot, 0, 1023, MIN_RPM, MAX_RPM);
+
+    vtAvrgBuffer[vtNextAvrg++] = vt;
+    if (vtNextAvrg >= avrgCount) {
+      vtNextAvrg = 0;
+    }
+    vtAvrg = 0;
+    for (int i = 0; i < avrgCount; i++) {
+      vtAvrg += vtAvrgBuffer[i];
+    }
+    vtAvrg /= avrgCount;
 
     // Compute control signal u
     float kp = 0.5;
@@ -98,23 +132,11 @@ void loop() {
     if (u<0) {
       dir = -1;
     }
-    int pwr = (int) fabs(u);
+    pwr = (int) fabs(u);
     if (pwr > 255) {
       pwr = 255;
     }
     setMotor(dir, pwr, EN, PH);
-
-    Serial.print(">pos:");
-    Serial.print(pos);
-    Serial.print(",v:");
-    Serial.print(v);
-    Serial.print(",vt:");
-    Serial.print(vt);
-    Serial.print(",vFilt:");
-    Serial.print(vFilt);
-    Serial.print(",pwr:");
-    Serial.print(pwr);
-    Serial.println();
 
     delay(1000 / CONTROLLER_REFRESH_RATE); // Update values every 10 ms
   }
@@ -122,11 +144,27 @@ void loop() {
   display.clearDisplay();
   display.setTextSize(2);
   display.setCursor(80, 16);
-  display.print(vt, 0);
+  display.print(vtAvrg, 0);
   display.setCursor(0, 0);
   display.setTextSize(3);
-  display.print(vFilt, 0);
+  display.print(vFiltAvrg, 0);
   display.display();
+
+  Serial.print(">pos:");
+  Serial.print(pos);
+  Serial.print(",v:");
+  Serial.print(v);
+  Serial.print(",vt:");
+  Serial.print(vt);
+  Serial.print(",avrgvt:");
+  Serial.print(vtAvrg);
+  Serial.print(",vFilt:");
+  Serial.print(vFilt);
+  Serial.print(",vFiltAvrg:");
+  Serial.print(vFiltAvrg);
+  Serial.print(",pwr:");
+  Serial.print(pwr);
+  Serial.println();
 }
 
 void setMotor(int dir, int pwmVal, int pwm, int phase) {
