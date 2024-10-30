@@ -108,6 +108,9 @@ void loop() {
     //float vt = 100*(sin(currT/1e6)>0);
     int pot = analogRead(POT);
     vt = map(pot, 0, 1023, MIN_RPM, MAX_RPM);
+    if (vt < 10) {
+      vt = 0;
+    }
 
     vtAvrgBuffer[vtNextAvrg++] = vt;
     if (vtNextAvrg >= avrgCount) {
@@ -135,6 +138,9 @@ void loop() {
     pwr = (int) fabs(u);
     if (pwr > 255) {
       pwr = 255;
+    }
+    if (vt < 10) {
+      pwr = 0;
     }
     setMotor(dir, pwr, EN, PH);
 
