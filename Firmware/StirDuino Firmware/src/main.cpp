@@ -107,7 +107,7 @@ void loop() {
     // Set target velocity
     //float vt = 100*(sin(currT/1e6)>0);
     int pot = analogRead(POT);
-    vt = map(pot, 0, 1023, MIN_RPM, MAX_RPM);
+    vt = map(pot, 0, 1023, MIN_RPM, MAX_RPM + 4);
     if (vt < 10) {
       vt = 0;
     }
