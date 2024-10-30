@@ -10,7 +10,7 @@
 
 #define MAX_RPM 1400  // maximale Drehzahl. Bei zu hoher Drehzahl können die Encoder-Ticks nicht mehr registriert werden.
 #define MIN_RPM 0     // minimale Drehzahl. Zu niedrige Drehzahlen können instabil sein.
-#define CONTROLLER_REFRESH_RATE 100 // Hz
+#define CONTROLLER_REFRESH_RATE 200 // Hz
 
 // Display
 #define SCREEN_WIDTH 128
