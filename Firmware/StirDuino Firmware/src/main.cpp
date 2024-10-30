@@ -148,10 +148,13 @@ void loop() {
   }
   
   display.clearDisplay();
+  display.setCursor(80, 2);
+  display.setTextSize(1);
+  display.print("SET");
+  display.setCursor(80, 12);
   display.setTextSize(2);
-  display.setCursor(80, 16);
   display.print(vtAvrg, 0);
-  display.setCursor(0, 0);
+  display.setCursor(4, 4);
   display.setTextSize(3);
   display.print(vFiltAvrg, 0);
   display.display();
