@@ -42,7 +42,7 @@ float vPrev = 0;
 
 float eintegral = 0;
 
-const int avrgCount = 128;
+const int avrgCount = 64;
 
 float vtAvrgBuffer[avrgCount];
 int vtNextAvrg = 0;
