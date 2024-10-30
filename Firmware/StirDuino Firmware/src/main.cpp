@@ -8,7 +8,8 @@
 #define PH 3    // Pin to set direction
 #define POT A0  // Abnehmer des Potentiometers
 
-#define MAX_RPM 1500 // maximale Drehzahl
+#define MAX_RPM 1400  // maximale Drehzahl. Bei zu hoher Drehzahl können die Encoder-Ticks nicht mehr registriert werden.
+#define MIN_RPM 0     // minimale Drehzahl. Zu niedrige Drehzahlen können instabil sein.
 
 // Display
 #define SCREEN_WIDTH 128
@@ -45,6 +46,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENC), readEncoder, RISING);
 
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);  
+  display.setRotation(2);
   display.display();
   display.clearDisplay();
   display.setTextSize(3);
@@ -68,11 +70,6 @@ void loop() {
   // Convert counts/s to RPM
   float v = velocity / 60.0 * 60.0;
 
-  Serial.print(pos);
-  Serial.print("\t");
-  Serial.print(v);
-  Serial.print("\t");
-
   // Low-pass filter (25 Hz cutoff)
   vFilt = 0.854*vFilt + 0.0728*v + 0.0728*vPrev;
   vPrev = v;
@@ -80,11 +77,11 @@ void loop() {
   // Set target velocity
   //float vt = 100*(sin(currT/1e6)>0);
   int pot = analogRead(POT);
-  float vt = map(pot, 0, 1025, 200, MAX_RPM);
+  float vt = map(pot, 0, 1025, MIN_RPM, MAX_RPM);
 
   // Compute control signal u
-  float kp = 0.06;
-  float ki = 0.03;
+  float kp = 0.5;
+  float ki = 0.2;
   float e = vt - vFilt;
   eintegral = eintegral + e*deltaT;
 
@@ -101,9 +98,17 @@ void loop() {
   }
   setMotor(dir, pwr, EN, PH);
 
+  Serial.print(">pos:");
+  Serial.print(pos);
+  Serial.print(",v:");
+  Serial.print(v);
+  Serial.print(",vt:");
   Serial.print(vt);
-  Serial.print("\t");
-  Serial.println(vFilt);
+  Serial.print(",vFilt:");
+  Serial.print(vFilt);
+  Serial.print(",pwr:");
+  Serial.print(pwr);
+  Serial.println();
 
   display.clearDisplay();
   display.setTextSize(2);
@@ -114,7 +119,7 @@ void loop() {
   display.print(vFilt, 0);
   display.display();
 
-  delay(25);
+  delay(10); // Update values every 10 ms
 }
 
 void setMotor(int dir, int pwmVal, int pwm, int phase) {
