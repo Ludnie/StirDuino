@@ -33,3 +33,4 @@
 
 # KiCad
 *.lck
+./fp-info-cache
