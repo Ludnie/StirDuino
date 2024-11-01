@@ -33,4 +33,5 @@
 
 # KiCad
 *.lck
-./fp-info-cache
+**/fp-info-cache
+KiCad PCB/StirDuino/StirDuino-backups/**
