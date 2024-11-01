@@ -7,6 +7,13 @@
 		(legacy_teardrops no)
 	)
 	(paper "A4")
+	(title_block
+		(title "StirDuino")
+		(date "2024-11-01")
+		(rev "0.1")
+		(company "TU Bergakademie Freiberg")
+		(comment 1 "ADD WIRE BRIDGE FROM D2 TO D9 (D2 HAS NO PWM CAPABILITIES)")
+	)
 	(layers
 		(0 "F.Cu" signal)
 		(31 "B.Cu" signal)
