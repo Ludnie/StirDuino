@@ -4,6 +4,13 @@
 	(generator_version "8.0")
 	(uuid "1c9f52e4-7a86-462b-8120-52313e705504")
 	(paper "A4")
+	(title_block
+		(title "StirDuino")
+		(date "2024-11-01")
+		(rev "1.0")
+		(company "TU Bergakademie Freiberg")
+		(comment 1 "Add wire bridge from D2 to D9 (D2 has no PWM)")
+	)
 	(lib_symbols
 		(symbol "Connector:Conn_01x02_Pin"
 			(pin_names
@@ -3064,16 +3071,6 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 72.39) (xy 166.37 72.39)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "352db293-27c0-4d3a-b750-d6342bc1b30d")
-	)
-	(wire
-		(pts
 			(xy 209.55 53.34) (xy 209.55 67.31)
 		)
 		(stroke
@@ -3231,6 +3228,16 @@
 			(type default)
 		)
 		(uuid "5258c576-d148-4273-94ea-3603c95b3a8f")
+	)
+	(wire
+		(pts
+			(xy 132.08 72.39) (xy 166.37 72.39)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "54c31fb9-2a94-4a72-b088-ab8e4502d948")
 	)
 	(wire
 		(pts
