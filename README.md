@@ -12,9 +12,9 @@ Arduino based, small form factor, low cost magnetic stir plate with PID-controll
 - **Serial Communication:** Stir parameters can be requested and logged via the serial port of the µ-controller.
 
 ## BOM
-| Part              | Quantity  | Vendor                                   |
-|-------------------|-----------|------------------------------------------|
-|                   |           |                                          |
+| Part               | Quantity  |
+|--------------------|-----------|
+| Arduino nano every |     1     |
 
 ## Upgrades and Fixes for next Version
 - [ ] Implement **operating hours counter**. Operating time stored in eeprom.
