@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "StirDuino Firmware",
+			"path": "Firmware/StirDuino Firmware"
+		}
+	],
+	"settings": {}
+}

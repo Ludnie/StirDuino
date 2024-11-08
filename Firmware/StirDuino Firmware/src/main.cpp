@@ -53,6 +53,10 @@ int vFiltNextAvrg = 0;
 float vFiltAvrg = 0;
 
 void setup() {
+
+  // Set PWM frequency to 64.5 kHz (also affects tone())
+  TCB1_CTRLA = 0b00000001;
+
   Serial.begin(115200);
   Wire.begin();
 
