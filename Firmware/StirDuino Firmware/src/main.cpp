@@ -4,8 +4,8 @@
 
 // Pins
 #define ENC 8   // Optical Encoder with 30 pulses/rev
-#define EN 9    // Pin to enable motor driver (pwm) !!! NOT 2, because this pin has no pwm !!!
-#define PH 3    // Pin to set direction
+#define EN 3    // Pin to enable motor driver (pwm) !!! NOT 2, because this pin has no pwm !!!
+#define PH 2    // Pin to set direction
 #define POT A0  // Abnehmer des Potentiometers
 
 #define MAX_RPM 1400  // maximale Drehzahl. Bei zu hoher Drehzahl können die Encoder-Ticks nicht mehr registriert werden.
