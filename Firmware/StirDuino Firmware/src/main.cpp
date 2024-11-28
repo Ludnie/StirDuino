@@ -126,7 +126,7 @@ void loop() {
 
     v = velocity / OPTICAL_ENC_PULSES * 60.0;           // Convert counts/s to RPM
 
-    // Low-pass filter (25 Hz cutoff) (should be recalculated with actulal data)
+    // Low-pass filter (25 Hz cutoff) (should be recalculated with actual data)
     vFilt = 0.854*vFilt + 0.0728*v + 0.0728*vPrev;
     vPrev = v;
 
