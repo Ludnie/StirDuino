@@ -11,6 +11,7 @@
 *****************************************************************************************/
 
 #include <Arduino.h>
+#include <util/atomic.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
@@ -112,8 +113,10 @@ void loop() {
   // run PI loop between display refreshs
   for (int i = 0; i <= (CONTROLLER_REFRESH_RATE / DISPLAY_REFRESH_RATE); i++) {
     
-    pos = 0;
-    pos = pos_i;
+    // read in atomic block so value cant change while being read
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+      pos = pos_i;
+    }
 
     long currT = micros();                              // current time in µs
     float deltaT = ((float) (currT - prevT)) / 1.0e6;   // time since last loop in s
