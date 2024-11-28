@@ -29,12 +29,16 @@
 #define MIN_RPM 0                   // mminimum speed. Speeds that are too low can be unstable.
 #define CONTROLLER_REFRESH_RATE 200 // Frequency for updating the PI control values
 
+// Serial interface
+#define BAUD_RATE 115200
+#define SERIAL_SEND_RATE 10   // Hz
+
 // Display
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 32
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
-#define DISPLAY_REFRESH_RATE 8 // refreshs per second
+#define DISPLAY_REFRESH_RATE 8 // Hz
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -57,6 +61,10 @@ void setMotor(int dir, int pwmVal, int pwm, int phase);
 void readEncoder();
 
 // globals
+uint16_t lastContrUpdate = 0;
+uint16_t lastDispUpdate = 0;
+uint16_t lastSerUpdate = 0;
+
 int pos = 0;  // tick counter of optical encoder
 float v = 0;  // unfiltered rotational speed (rpm)
 int pwr = 0;  // PWM duty cycle (0 - 255)
@@ -89,7 +97,7 @@ void setup() {
   // (also affects tone() if used)
   TCB1_CTRLA = 0b00000001;
 
-  Serial.begin(115200);
+  Serial.begin(BAUD_RATE);
   Wire.begin();
 
   pinMode(OPTICAL_ENC, INPUT);
@@ -109,10 +117,11 @@ void setup() {
 }
 
 void loop() {
+  
+  uint16_t current = millis();
 
-  // run PI loop between display refreshs
-  for (int i = 0; i <= (CONTROLLER_REFRESH_RATE / DISPLAY_REFRESH_RATE); i++) {
-    
+  if ((current - lastContrUpdate) >= ((1 / CONTROLLER_REFRESH_RATE) * 1.0e3)) {
+
     // read in atomic block so value cant change while being read
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
       pos = pos_i;
@@ -181,39 +190,45 @@ void loop() {
     }
     setMotor(dir, pwr, EN, PH);
 
-    delay(1000 / CONTROLLER_REFRESH_RATE); // Update values every 10 ms
+    lastContrUpdate = current;
   }
   
   // update display
-  display.clearDisplay();
-  display.setCursor(80, 2);
-  display.setTextSize(1);
-  display.print("SET");
-  display.setCursor(80, 12);
-  display.setTextSize(2);
-  display.print(vtAvrg, 0);
-  display.setCursor(4, 4);
-  display.setTextSize(3);
-  display.print(vFiltAvrg, 0);
-  display.display();
+  if ((current - lastDispUpdate) >= (1/DISPLAY_REFRESH_RATE * 1.0e3)) {
+    display.clearDisplay();
+    display.setCursor(80, 2);
+    display.setTextSize(1);
+    display.print("SET");
+    display.setCursor(80, 12);
+    display.setTextSize(2);
+    display.print(vtAvrg, 0);
+    display.setCursor(4, 4);
+    display.setTextSize(3);
+    display.print(vFiltAvrg, 0);
+    display.display();
+    lastDispUpdate = current;
+  }
 
   // send values over serial interface
   // formatted for use with serial-plotter (by Mario Zechner)
-  Serial.print(">pos:");
-  Serial.print(pos);
-  Serial.print(",v:");
-  Serial.print(v);
-  Serial.print(",vt:");
-  Serial.print(vt);
-  Serial.print(",avrgvt:");
-  Serial.print(vtAvrg);
-  Serial.print(",vFilt:");
-  Serial.print(vFilt);
-  Serial.print(",vFiltAvrg:");
-  Serial.print(vFiltAvrg);
-  Serial.print(",pwr:");
-  Serial.print(pwr);
-  Serial.println();
+  if ((current - lastSerUpdate) >= (1/SERIAL_SEND_RATE * 1.0e3)) {
+    Serial.print(">pos:");
+    Serial.print(pos);
+    Serial.print(",v:");
+    Serial.print(v);
+    Serial.print(",vt:");
+    Serial.print(vt);
+    Serial.print(",avrgvt:");
+    Serial.print(vtAvrg);
+    Serial.print(",vFilt:");
+    Serial.print(vFilt);
+    Serial.print(",vFiltAvrg:");
+    Serial.print(vFiltAvrg);
+    Serial.print(",pwr:");
+    Serial.print(pwr);
+    Serial.println();
+    lastSerUpdate = current;
+  }
 }
 
 void setMotor(int dir, int pwmVal, int pwm, int phase) {
