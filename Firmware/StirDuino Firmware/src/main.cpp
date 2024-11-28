@@ -120,6 +120,7 @@ void loop() {
   
   uint16_t current = millis();
 
+  // update control loop
   if ((current - lastContrUpdate) >= ((1 / CONTROLLER_REFRESH_RATE) * 1.0e3)) {
 
     // read in atomic block so value cant change while being read
