@@ -61,8 +61,6 @@ void setMotor(int dir, int pwmVal, int pwm, int phase);
 void readEncoder();
 
 // globals
-uint16_t ContrUpdateMillis = 1.0e3/CONTROLLER_REFRESH_RATE;
-
 uint16_t lastContrUpdate = 0;
 uint16_t lastDispUpdate = 0;
 uint16_t lastSerUpdate = 0;
@@ -118,7 +116,6 @@ void setup() {
   display.setTextColor(SSD1306_WHITE);
 
   Serial.println("StirDuino Firmware v1.0");
-  Serial.println(ContrUpdateMillis);
 }
 
 void loop() {
@@ -194,7 +191,7 @@ void loop() {
     if (vt < 10) {      // avoid too low speeds
       pwr = 0;
     }
-    setMotor(dir, 50, EN, PH);
+    setMotor(dir, pwr, EN, PH);
 
     lastContrUpdate = current;
   }
