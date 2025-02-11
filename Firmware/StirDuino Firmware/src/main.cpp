@@ -38,7 +38,7 @@
 #define SCREEN_HEIGHT 32
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
-#define DISPLAY_REFRESH_RATE 8 // Hz
+#define DISPLAY_REFRESH_RATE 10 // Hz
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -61,6 +61,8 @@ void setMotor(int dir, int pwmVal, int pwm, int phase);
 void readEncoder();
 
 // globals
+uint16_t ContrUpdateMillis = 1.0e3/CONTROLLER_REFRESH_RATE;
+
 uint16_t lastContrUpdate = 0;
 uint16_t lastDispUpdate = 0;
 uint16_t lastSerUpdate = 0;
@@ -114,6 +116,9 @@ void setup() {
   display.clearDisplay();
   display.setTextSize(3);
   display.setTextColor(SSD1306_WHITE);
+
+  Serial.println("StirDuino Firmware v1.0");
+  Serial.println(ContrUpdateMillis);
 }
 
 void loop() {
@@ -121,7 +126,7 @@ void loop() {
   uint16_t current = millis();
 
   // update control loop
-  if ((current - lastContrUpdate) >= ((1 / CONTROLLER_REFRESH_RATE) * 1.0e3)) {
+  if ((current - lastContrUpdate) >= (1.0e3 / CONTROLLER_REFRESH_RATE)) {
 
     // read in atomic block so value cant change while being read
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -180,7 +185,7 @@ void loop() {
     // Set motor speed and direction
     int dir = 1;
     if (u<0) {
-      dir = -1;
+      dir = 1;
     }
     pwr = (int) fabs(u);
     if (pwr > 255) {
@@ -189,13 +194,13 @@ void loop() {
     if (vt < 10) {      // avoid too low speeds
       pwr = 0;
     }
-    setMotor(dir, pwr, EN, PH);
+    setMotor(dir, 50, EN, PH);
 
     lastContrUpdate = current;
   }
   
   // update display
-  if ((current - lastDispUpdate) >= (1/DISPLAY_REFRESH_RATE * 1.0e3)) {
+  if ((current - lastDispUpdate) >= (1.0e3/DISPLAY_REFRESH_RATE)) {
     display.clearDisplay();
     display.setCursor(80, 2);
     display.setTextSize(1);
@@ -212,7 +217,7 @@ void loop() {
 
   // send values over serial interface
   // formatted for use with serial-plotter (by Mario Zechner)
-  if ((current - lastSerUpdate) >= (1/SERIAL_SEND_RATE * 1.0e3)) {
+  if ((current - lastSerUpdate) >= (1.0e3/SERIAL_SEND_RATE)) {
     Serial.print(">pos:");
     Serial.print(pos);
     Serial.print(",v:");
