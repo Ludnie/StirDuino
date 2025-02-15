@@ -10,10 +10,26 @@
 * Code written by Ludwig Gabler
 *****************************************************************************************/
 
+// Libraries
 #include <Arduino.h>
 #include <util/atomic.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+
+// Debugging options (taken from https://forum.arduino.cc/t/managing-serial-print-as-a-debug-tool/1024824/2)
+#define DEBUG 1 // SET TO 0 OUT TO REMOVE TRACES
+
+#if DEBUG
+#define D_SerialBegin(...) Serial.begin(__VA_ARGS__)
+#define D_print(...) Serial.print(__VA_ARGS__)
+#define D_write(...) Serial.write(__VA_ARGS__)
+#define D_println(...) Serial.println(__VA_ARGS__)
+#else
+#define D_SerialBegin(...)
+#define D_print(...)
+#define D_write(...)
+#define D_println(...)
+#endif
 
 // Pins
 #define OPTICAL_ENC 8     // Optical Encoder
@@ -130,17 +146,33 @@ void loop() {
       pos = pos_i;
     }
 
+    D_print(">pos:");
+    D_println(pos);
+
     long currT = micros();                              // current time in µs
     float deltaT = ((float) (currT - prevT)) / 1.0e6;   // time since last loop in s
     float velocity = (pos - posPrev) / deltaT;          // current rotational speed (pulses per second)
     posPrev = pos;
     prevT = currT;
 
+    D_print(">currT:");
+    D_println(currT);
+    D_print(">deltaT:");
+    D_println(deltaT, 6);
+    D_print(">velocity:");
+    D_println(velocity, 6);
+
     v = velocity / OPTICAL_ENC_PULSES * 60.0;           // Convert counts/s to RPM
+
+    D_print(">v:");
+    D_println(v);
 
     // Low-pass filter (25 Hz cutoff) (should be recalculated with actual data)
     vFilt = 0.854*vFilt + 0.0728*v + 0.0728*vPrev;
     vPrev = v;
+
+    D_print(">vFilt:");
+    D_println(vFilt);
 
     // moving averages for more stable readings on display
     vFiltAvrgBuffer[vFiltNextAvrg++] = vFilt;
@@ -159,6 +191,9 @@ void loop() {
     if (vt < 10) {  // avoid too low speeds
       vt = 0;
     }
+
+    D_print(">vt:");
+    D_println(vt);
 
     // calculate moving average for target speed
     vtAvrgBuffer[vtNextAvrg++] = vt;
@@ -179,11 +214,22 @@ void loop() {
 
     float u = kp*e + ki*eintegral;
 
+    D_print(">e:");
+    D_println(e);
+    D_print(">eintegral:");
+    D_println(eintegral);
+    D_print(">u:");
+    D_println(u);
+
     // Set motor speed and direction
     int dir = 1;
     if (u<0) {
       dir = 1;
     }
+
+    D_print(">dir:");
+    D_println(dir);
+
     pwr = (int) fabs(u);
     if (pwr > 255) {
       pwr = 255;
@@ -192,6 +238,9 @@ void loop() {
       pwr = 0;
     }
     setMotor(dir, pwr, EN, PH);
+
+    D_print(">pwr:");
+    D_println(pwr);
 
     lastContrUpdate = current;
   }
@@ -215,21 +264,21 @@ void loop() {
   // send values over serial interface
   // formatted for use with serial-plotter (by Mario Zechner)
   if ((current - lastSerUpdate) >= (1.0e3/SERIAL_SEND_RATE)) {
-    Serial.print(">pos:");
-    Serial.print(pos);
-    Serial.print(",v:");
-    Serial.print(v);
-    Serial.print(",vt:");
-    Serial.print(vt);
-    Serial.print(",avrgvt:");
-    Serial.print(vtAvrg);
-    Serial.print(",vFilt:");
-    Serial.print(vFilt);
-    Serial.print(",vFiltAvrg:");
-    Serial.print(vFiltAvrg);
-    Serial.print(",pwr:");
-    Serial.print(pwr);
-    Serial.println();
+    // Serial.print(">pos:");
+    // Serial.print(pos);
+    // Serial.print(",v:");
+    // Serial.print(v);
+    // Serial.print(",vt:");
+    // Serial.print(vt);
+    // Serial.print(",avrgvt:");
+    // Serial.print(vtAvrg);
+    // Serial.print(",vFilt:");
+    // Serial.print(vFilt);
+    // Serial.print(",vFiltAvrg:");
+    // Serial.print(vFiltAvrg);
+    // Serial.print(",pwr:");
+    // Serial.print(pwr);
+    // Serial.println();
     lastSerUpdate = current;
   }
 }
