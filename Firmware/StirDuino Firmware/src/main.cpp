@@ -224,7 +224,7 @@ void loop() {
     // Set motor speed and direction
     int dir = 1;
     if (u<0) {
-      dir = 1;
+      dir = -1;
     }
 
     D_print(">dir:");
