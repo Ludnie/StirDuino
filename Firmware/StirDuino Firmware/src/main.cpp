@@ -24,7 +24,7 @@
 // #define ENC_DT 6  // DT Pin of rotary encoder switch
 // #define ENC_CLK 5 // CLK Pin of rotary encoder switch
 
-#define OPTICAL_ENC_PULSES 60       // number of pulses of optical encoder
+#define OPTICAL_ENC_PULSES 120       // number of pulses of optical encoder
 #define MAX_RPM 1400                // maximum speed. If the speed is too high, the encoder ticks can no longer be registered.
 #define MIN_RPM 0                   // mminimum speed. Speeds that are too low can be unstable.
 #define CONTROLLER_REFRESH_RATE 200 // Frequency for updating the PI control values
