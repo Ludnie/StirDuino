@@ -14,12 +14,12 @@ cturing Information (PMI)---4.0---2014-10-13',
 /* implementation_level */ '2;1');
 
 FILE_NAME(
-/* name */ '6735e864b5dbc3538260f61e',
-/* time_stamp */ '2024-11-14T12:09:09Z',
+/* name */ '67ac86badd85ec3193f9e792',
+/* time_stamp */ '2025-02-12T11:32:11Z',
 /* author */ (''),
 /* organization */ (''),
 /* preprocessor_version */ 'ST-DEVELOPER v20',
-/* originating_system */ 'ONSHAPE BY PTC INC, 1.189',
+/* originating_system */ 'ONSHAPE BY PTC INC, 1.193',
 /* authorisation */ '  ');
 
 FILE_SCHEMA (('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF { 1 0 10303 442 1 1 4 }'));
@@ -3033,7 +3033,7 @@ GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#2997))
 GLOBAL_UNIT_ASSIGNED_CONTEXT((#3000,#2999,#2998))
 REPRESENTATION_CONTEXT('Bottom','TOP_LEVEL_ASSEMBLY_PART')
 );
-#2997=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(5.E-6),#3000,
+#2997=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(2.E-5),#3000,
 'DISTANCE_ACCURACY_VALUE','Maximum Tolerance applied to model');
 #2998=(
 NAMED_UNIT(*)
