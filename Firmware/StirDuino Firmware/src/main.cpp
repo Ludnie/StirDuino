@@ -18,7 +18,7 @@
 #include <PID_v1.h>
 
 // Debugging options (taken from https://forum.arduino.cc/t/managing-serial-print-as-a-debug-tool/1024824/2)
-#define DEBUG 1 // SET TO 0 OUT TO REMOVE TRACES
+#define DEBUG 0 // SET TO 0 OUT TO REMOVE TRACES
 
 #if DEBUG
 #define D_SerialBegin(...) Serial.begin(__VA_ARGS__)
@@ -45,12 +45,12 @@
 #define MAX_RPM 1500                // maximum speed. If the speed is too high, the encoder ticks can no longer be registered.
 #define MIN_RPM 0                   // mminimum speed. Speeds that are too low can be unstable.
 #define CONTROLLER_REFRESH_RATE 20  // Frequency for updating the PI control values
-#define aggP 0.5                       // aggressive Proportional gain
-#define aggI 0.2                       // aggressive Integral gain
-#define aggD 0.2                       // aggressive Derivative gain
-#define consP 0.3                      // conservative Proportional gain
+#define aggP 0.5                    // aggressive Proportional gain
+#define aggI 0.2                    // aggressive Integral gain
+#define aggD 0.2                    // aggressive Derivative gain
+#define consP 0.3                   // conservative Proportional gain
 #define consI 0.1                   // conservative Integral gain
-#define consD 0.1                    // conservative Derivative gain
+#define consD 0.1                   // conservative Derivative gain
 
 // Serial interface
 #define BAUD_RATE 115200
