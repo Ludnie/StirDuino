@@ -40,21 +40,21 @@
 // #define ENC_DT 6  // DT Pin of rotary encoder switch
 // #define ENC_CLK 5 // CLK Pin of rotary encoder switch
 
-#define OPTICAL_ENC_PULSES 120       // number of pulses of optical encoder
-#define MAX_RPM 1400                // maximum speed. If the speed is too high, the encoder ticks can no longer be registered.
+#define OPTICAL_ENC_PULSES 120      // number of pulses of optical encoder
+#define MAX_RPM 3000                // maximum speed. If the speed is too high, the encoder ticks can no longer be registered.
 #define MIN_RPM 0                   // mminimum speed. Speeds that are too low can be unstable.
-#define CONTROLLER_REFRESH_RATE 200 // Frequency for updating the PI control values
+#define CONTROLLER_REFRESH_RATE 20  // Frequency for updating the PI control values
 
 // Serial interface
 #define BAUD_RATE 115200
-#define SERIAL_SEND_RATE 10   // Hz
+#define SERIAL_SEND_RATE 1   // Hz
 
 // Display
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 32
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
-#define DISPLAY_REFRESH_RATE 10 // Hz
+#define DISPLAY_REFRESH_RATE 5 // Hz
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -88,9 +88,10 @@ int pwr = 0;  // PWM duty cycle (0 - 255)
 long prevT = 0;   // last time PI loop ran (µs)
 int posPrev = 0;  // last tick count of optical encoder
 
-float vt = 0;     // target rotational speed set by potentiometer (rpm)
-float vFilt = 0;  // filtered rotational speed (rpm)
-float vPrev = 0;  // last rotational speed (rpm)
+float alpha = 0.075;  // low-pass filter coefficient
+float vt = 0;         // target rotational speed set by potentiometer (rpm)
+float vFilt = 0;      // filtered rotational speed (rpm)
+float vPrev = 0;      // last rotational speed (rpm)
 
 float eintegral = 0;  // integral term of PI controller
 
@@ -98,7 +99,7 @@ volatile int pos_i = 0; // volatile for variables used in an interrupt
 
 // variables for moving average calculation for more stable values
 // displayed on OLED display
-const int avrgCount = 64;         // sampling width of mooving average
+const int avrgCount = 32;         // sampling width of mooving average
 float vtAvrgBuffer[avrgCount];    // buffer for target speed average
 int vtNextAvrg = 0;               // sample count for target speed average
 float vtAvrg = 0;                 // target speed average
@@ -146,33 +147,17 @@ void loop() {
       pos = pos_i;
     }
 
-    D_print(">pos:");
-    D_println(pos);
-
     long currT = micros();                              // current time in µs
     float deltaT = ((float) (currT - prevT)) / 1.0e6;   // time since last loop in s
     float velocity = (pos - posPrev) / deltaT;          // current rotational speed (pulses per second)
     posPrev = pos;
     prevT = currT;
 
-    D_print(">currT:");
-    D_println(currT);
-    D_print(">deltaT:");
-    D_println(deltaT, 6);
-    D_print(">velocity:");
-    D_println(velocity, 6);
-
     v = velocity / OPTICAL_ENC_PULSES * 60.0;           // Convert counts/s to RPM
 
-    D_print(">v:");
-    D_println(v);
-
-    // Low-pass filter (25 Hz cutoff) (should be recalculated with actual data)
-    vFilt = 0.854*vFilt + 0.0728*v + 0.0728*vPrev;
-    vPrev = v;
-
-    D_print(">vFilt:");
-    D_println(vFilt);
+    // Low-pass filter
+    vFilt = alpha*v + (1-alpha)*vPrev;
+    vPrev = vFilt;
 
     // moving averages for more stable readings on display
     vFiltAvrgBuffer[vFiltNextAvrg++] = vFilt;
@@ -192,9 +177,6 @@ void loop() {
       vt = 0;
     }
 
-    D_print(">vt:");
-    D_println(vt);
-
     // calculate moving average for target speed
     vtAvrgBuffer[vtNextAvrg++] = vt;
     if (vtNextAvrg >= avrgCount) {
@@ -207,28 +189,18 @@ void loop() {
     vtAvrg /= avrgCount;
 
     // Compute control signal u
-    float kp = 0.5;
-    float ki = 0.2;
+    float kp = 0.1;
+    float ki = 0.05;
     float e = vt - vFilt;
     eintegral = eintegral + e*deltaT;
 
     float u = kp*e + ki*eintegral;
 
-    D_print(">e:");
-    D_println(e);
-    D_print(">eintegral:");
-    D_println(eintegral);
-    D_print(">u:");
-    D_println(u);
-
     // Set motor speed and direction
     int dir = 1;
     if (u<0) {
-      dir = -1;
+      u = 0;
     }
-
-    D_print(">dir:");
-    D_println(dir);
 
     pwr = (int) fabs(u);
     if (pwr > 255) {
@@ -239,10 +211,22 @@ void loop() {
     }
     setMotor(dir, pwr, EN, PH);
 
-    D_print(">pwr:");
-    D_println(pwr);
-
     lastContrUpdate = current;
+
+    D_println(">pos:" + String(pos) 
+            + ", currT:" + String(currT) 
+            + ", deltaT:" + String(deltaT, 6) 
+            + ", velocity:" + String(velocity, 6) 
+            + ", v:" + String(v) 
+            + ", vFilt:" + String(vFilt) 
+            + ", vFiltAvrg:" + String(vFiltAvrg) 
+            + ", vt:" + String(vt) 
+            + ", vtAvrg:" + String(vtAvrg)
+            + ", e:" + String(e)
+            + ", eintegral:" + String(eintegral)
+            + ", u:" + String(u)
+            + ", dir:" + String(dir)
+            + ", pwr:" + String(pwr));
   }
   
   // update display
@@ -264,21 +248,14 @@ void loop() {
   // send values over serial interface
   // formatted for use with serial-plotter (by Mario Zechner)
   if ((current - lastSerUpdate) >= (1.0e3/SERIAL_SEND_RATE)) {
-    // Serial.print(">pos:");
-    // Serial.print(pos);
-    // Serial.print(",v:");
-    // Serial.print(v);
-    // Serial.print(",vt:");
-    // Serial.print(vt);
-    // Serial.print(",avrgvt:");
-    // Serial.print(vtAvrg);
-    // Serial.print(",vFilt:");
-    // Serial.print(vFilt);
-    // Serial.print(",vFiltAvrg:");
-    // Serial.print(vFiltAvrg);
-    // Serial.print(",pwr:");
-    // Serial.print(pwr);
-    // Serial.println();
+    Serial.print(">v:");
+    Serial.println(v);
+    Serial.print(">vt:");
+    Serial.println(vt);
+    Serial.print(">vFilt:");
+    Serial.println(vFilt);
+    Serial.print(">pwr:");
+    Serial.println(pwr);
     lastSerUpdate = current;
   }
 }
