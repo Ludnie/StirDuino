@@ -100,10 +100,9 @@ float vt = 0;         // target rotational speed set by potentiometer (rpm)
 float vFilt = 0;      // filtered rotational speed (rpm)
 float vPrev = 0;      // last rotational speed (rpm)
 
-double Setpoint, Input, Output;                               // Variables for PID controller
-PID myPID(&Input, &Output, &Setpoint, consP, consI, consD, DIRECT); // PID controller
-
-float eintegral = 0;  // integral term of PI controller
+// PID controller
+double Setpoint, Input, Output;
+PID myPID(&Input, &Output, &Setpoint, consP, consI, consD, DIRECT);
 
 volatile int pos_i = 0; // volatile for variables used in an interrupt
 
@@ -124,9 +123,11 @@ void setup() {
   // (also affects tone() if used)
   TCB1_CTRLA = 0b00000001;
 
+  // Initialize serial interface and I2C bus
   Serial.begin(BAUD_RATE);
   Wire.begin();
 
+  // Initialize pins
   pinMode(OPTICAL_ENC, INPUT);
   pinMode(EN, OUTPUT);
   pinMode(PH, OUTPUT);
@@ -135,6 +136,7 @@ void setup() {
   // Interrupt for optical encoder
   attachInterrupt(digitalPinToInterrupt(OPTICAL_ENC), readEncoder, RISING);
 
+  // Initialize display
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
   display.setRotation(2);
   display.display();
@@ -142,15 +144,17 @@ void setup() {
   display.setTextSize(3);
   display.setTextColor(SSD1306_WHITE);
 
-  Serial.println("StirDuino Firmware v1.0");
-
+  // Initialize PID controller
   Setpoint = 0;
   Input = 0;
   myPID.SetMode(AUTOMATIC);
+
+  Serial.println("StirDuino Firmware v1.0");
 }
 
 void loop() {
   
+  // current time in ms
   uint16_t current = millis();
 
   // update control loop
@@ -161,18 +165,62 @@ void loop() {
       pos = pos_i;
     }
 
+    // calculate current speed
     long currT = micros();                              // current time in µs
     float deltaT = ((float) (currT - prevT)) / 1.0e6;   // time since last loop in s
-    float velocity = (pos - posPrev) / deltaT;          // current rotational speed (pulses per second)
-    posPrev = pos;
-    prevT = currT;
-
+    float velocity = (pos - posPrev) / deltaT;          // current rotational speed (counts/s)
+    posPrev = pos;                                      // update last tick count
+    prevT = currT;                                      // update last time
     v = velocity / OPTICAL_ENC_PULSES * 60.0;           // Convert counts/s to RPM
 
     // Low-pass filter
     vFilt = alpha*v + (1-alpha)*vPrev;
     vPrev = vFilt;
     Input = vFilt;
+
+    // calculate target speed from potentiometer reading (noisy)
+    int pot = analogRead(POT);
+    vt = map(pot, 0, 1023, MIN_RPM, MAX_RPM + 4);
+    if (vt < 10) {  // avoid too low speeds
+      vt = 0;
+    }
+    Setpoint = vt;
+
+    // Use aggressive PID values for small errors and conservative values for large errors
+    double gap = abs(Setpoint - Input);
+    if (gap < 20) {
+      myPID.SetTunings(consP, consI, consD);
+    }
+    else {
+      myPID.SetTunings(aggP, aggI, aggD);
+    }
+    
+    // Compute PID output
+    myPID.Compute();
+
+    // Set motor speed and direction
+    int dir = 1;
+    if (Output<0) {
+      dir = -1;
+      //Output = 0;
+    }
+
+    // limit power to 255
+    pwr = (int) fabs(Output);
+    if (pwr > 255) {
+      pwr = 255;
+    }
+
+    // avoid too low speeds
+    if (vt < 10) {
+      pwr = 0;
+    }
+
+    // set motor speed and direction
+    setMotor(dir, pwr, EN, PH);
+
+    // update last update time
+    lastContrUpdate = current;
 
     // moving averages for more stable readings on display
     vFiltAvrgBuffer[vFiltNextAvrg++] = vFilt;
@@ -185,14 +233,6 @@ void loop() {
     }
     vFiltAvrg /= avrgCount;
 
-    // calculate target speed from potentiometer reading (noisy)
-    int pot = analogRead(POT);
-    vt = map(pot, 0, 1023, MIN_RPM, MAX_RPM + 4);
-    if (vt < 10) {  // avoid too low speeds
-      vt = 0;
-    }
-    Setpoint = vt;
-
     // calculate moving average for target speed
     vtAvrgBuffer[vtNextAvrg++] = vt;
     if (vtNextAvrg >= avrgCount) {
@@ -204,34 +244,7 @@ void loop() {
     }
     vtAvrg /= avrgCount;
 
-    double gap = abs(Setpoint - Input);
-    if (gap < 20) {
-      myPID.SetTunings(consP, consI, consD);
-    }
-    else {
-      myPID.SetTunings(aggP, aggI, aggD);
-    }
-    
-    myPID.Compute();
-
-    // Set motor speed and direction
-    int dir = 1;
-    if (Output<0) {
-      dir = -1;
-      //Output = 0;
-    }
-
-    pwr = (int) fabs(Output);
-    if (pwr > 255) {
-      pwr = 255;
-    }
-    if (vt < 10) {      // avoid too low speeds
-      pwr = 0;
-    }
-    setMotor(dir, pwr, EN, PH);
-
-    lastContrUpdate = current;
-
+    // Prints for debugging
     D_println(">pos:" + String(pos) 
             // + ", currT:" + String(currT) 
             // + ", deltaT:" + String(deltaT, 6) 
@@ -271,6 +284,13 @@ void loop() {
   }
 }
 
+// Functions
+
+// Sets motor speed and direction
+// dir: direction (1: CW, -1: CCW)
+// pwmVal: PWM duty cycle (0 - 255)
+// pwm: PWM pin
+// phase: direction pin
 void setMotor(int dir, int pwmVal, int pwm, int phase) {
   analogWrite(pwm, pwmVal);
   if (dir == 1) {
@@ -281,6 +301,8 @@ void setMotor(int dir, int pwmVal, int pwm, int phase) {
   }
 }
 
+// Interrupt function for optical encoder
+// Increases position counter by one
 void readEncoder() {
   pos_i++;
 }
