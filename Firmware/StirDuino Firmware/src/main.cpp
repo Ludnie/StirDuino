@@ -83,6 +83,19 @@ void setMotor(int dir, int pwmVal, int pwm, int phase);
 ********************************************************************************/
 void readEncoder();
 
+/*******************************************************************************
+ *  Right-aligns a float value for printing.
+ *
+ * Inputs:
+ * - float value
+ * - width of the string
+ * - number of decimal places
+ *
+ * Returns:
+ * - right-aligned string
+ * ******************************************************************************/
+String floatAlignRight(float f, int width, int precision);
+
 // globals
 uint16_t lastContrUpdate = 0;
 uint16_t lastDispUpdate = 0;
@@ -138,9 +151,9 @@ void setup() {
 
   // Initialize display
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
+  display.clearDisplay();
   display.setRotation(2);
   display.display();
-  display.clearDisplay();
   display.setTextSize(3);
   display.setTextColor(SSD1306_WHITE);
 
@@ -150,6 +163,16 @@ void setup() {
   myPID.SetMode(AUTOMATIC);
 
   Serial.println("StirDuino Firmware v1.0");
+
+  // Display splash screen
+  display.setCursor(0, 0);
+  display.setTextSize(2);
+  display.print("StirDuino");
+  display.setTextSize(1);
+  display.setCursor(0, 24);
+  display.print("Firmware v1.0");
+  display.display();
+  delay(5000);
 }
 
 void loop() {
@@ -265,13 +288,13 @@ void loop() {
     display.clearDisplay();
     display.setCursor(80, 2);
     display.setTextSize(1);
-    display.print("SET");
+    display.print("rpm  SET");
     display.setCursor(80, 12);
     display.setTextSize(2);
-    display.print(vtAvrg, 0);
+    display.print(floatAlignRight(vtAvrg, 4, 0));
     display.setCursor(4, 4);
     display.setTextSize(3);
-    display.print(vFiltAvrg, 0);
+    display.print(floatAlignRight(vFiltAvrg, 4, 0));
     display.display();
     lastDispUpdate = current;
   }
@@ -305,4 +328,14 @@ void setMotor(int dir, int pwmVal, int pwm, int phase) {
 // Increases position counter by one
 void readEncoder() {
   pos_i++;
+}
+
+// Function for right-aligned float printing
+String floatAlignRight(float f, int width, int precision) {
+  String s = String(f, precision);
+  int len = s.length();
+  for (int i = 0; i < width - len; i++) {
+    s = " " + s;
+  }
+  return s;
 }
