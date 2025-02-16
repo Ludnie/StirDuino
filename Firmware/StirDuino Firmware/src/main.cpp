@@ -41,7 +41,7 @@
 // #define ENC_CLK 5 // CLK Pin of rotary encoder switch
 
 #define OPTICAL_ENC_PULSES 120      // number of pulses of optical encoder
-#define MAX_RPM 3000                // maximum speed. If the speed is too high, the encoder ticks can no longer be registered.
+#define MAX_RPM 1500                // maximum speed. If the speed is too high, the encoder ticks can no longer be registered.
 #define MIN_RPM 0                   // mminimum speed. Speeds that are too low can be unstable.
 #define CONTROLLER_REFRESH_RATE 20  // Frequency for updating the PI control values
 
@@ -54,7 +54,7 @@
 #define SCREEN_HEIGHT 32
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
-#define DISPLAY_REFRESH_RATE 5 // Hz
+#define DISPLAY_REFRESH_RATE 2 // Hz
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -189,8 +189,8 @@ void loop() {
     vtAvrg /= avrgCount;
 
     // Compute control signal u
-    float kp = 0.1;
-    float ki = 0.05;
+    float kp = 0.2;
+    float ki = 0.1;
     float e = vt - vFilt;
     eintegral = eintegral + e*deltaT;
 
@@ -248,14 +248,7 @@ void loop() {
   // send values over serial interface
   // formatted for use with serial-plotter (by Mario Zechner)
   if ((current - lastSerUpdate) >= (1.0e3/SERIAL_SEND_RATE)) {
-    Serial.print(">v:");
-    Serial.println(v);
-    Serial.print(">vt:");
-    Serial.println(vt);
-    Serial.print(">vFilt:");
-    Serial.println(vFilt);
-    Serial.print(">pwr:");
-    Serial.println(pwr);
+    Serial.println(">v:" + String(v) + ", vt:" + String(vt) + ", vFilt:" + String(vFilt) + ", pwr:" + String(pwr));
     lastSerUpdate = current;
   }
 }
