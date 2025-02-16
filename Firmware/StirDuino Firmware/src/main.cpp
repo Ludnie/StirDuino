@@ -15,6 +15,7 @@
 #include <util/atomic.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <PID_v1.h>
 
 // Debugging options (taken from https://forum.arduino.cc/t/managing-serial-print-as-a-debug-tool/1024824/2)
 #define DEBUG 1 // SET TO 0 OUT TO REMOVE TRACES
@@ -44,6 +45,12 @@
 #define MAX_RPM 1500                // maximum speed. If the speed is too high, the encoder ticks can no longer be registered.
 #define MIN_RPM 0                   // mminimum speed. Speeds that are too low can be unstable.
 #define CONTROLLER_REFRESH_RATE 20  // Frequency for updating the PI control values
+#define aggP 0.5                       // aggressive Proportional gain
+#define aggI 0.2                       // aggressive Integral gain
+#define aggD 0.2                       // aggressive Derivative gain
+#define consP 0.3                      // conservative Proportional gain
+#define consI 0.1                   // conservative Integral gain
+#define consD 0.1                    // conservative Derivative gain
 
 // Serial interface
 #define BAUD_RATE 115200
@@ -93,6 +100,9 @@ float vt = 0;         // target rotational speed set by potentiometer (rpm)
 float vFilt = 0;      // filtered rotational speed (rpm)
 float vPrev = 0;      // last rotational speed (rpm)
 
+double Setpoint, Input, Output;                               // Variables for PID controller
+PID myPID(&Input, &Output, &Setpoint, consP, consI, consD, DIRECT); // PID controller
+
 float eintegral = 0;  // integral term of PI controller
 
 volatile int pos_i = 0; // volatile for variables used in an interrupt
@@ -133,6 +143,10 @@ void setup() {
   display.setTextColor(SSD1306_WHITE);
 
   Serial.println("StirDuino Firmware v1.0");
+
+  Setpoint = 0;
+  Input = 0;
+  myPID.SetMode(AUTOMATIC);
 }
 
 void loop() {
@@ -158,6 +172,7 @@ void loop() {
     // Low-pass filter
     vFilt = alpha*v + (1-alpha)*vPrev;
     vPrev = vFilt;
+    Input = vFilt;
 
     // moving averages for more stable readings on display
     vFiltAvrgBuffer[vFiltNextAvrg++] = vFilt;
@@ -176,6 +191,7 @@ void loop() {
     if (vt < 10) {  // avoid too low speeds
       vt = 0;
     }
+    Setpoint = vt;
 
     // calculate moving average for target speed
     vtAvrgBuffer[vtNextAvrg++] = vt;
@@ -188,21 +204,24 @@ void loop() {
     }
     vtAvrg /= avrgCount;
 
-    // Compute control signal u
-    float kp = 0.2;
-    float ki = 0.1;
-    float e = vt - vFilt;
-    eintegral = eintegral + e*deltaT;
-
-    float u = kp*e + ki*eintegral;
+    double gap = abs(Setpoint - Input);
+    if (gap < 20) {
+      myPID.SetTunings(consP, consI, consD);
+    }
+    else {
+      myPID.SetTunings(aggP, aggI, aggD);
+    }
+    
+    myPID.Compute();
 
     // Set motor speed and direction
     int dir = 1;
-    if (u<0) {
-      u = 0;
+    if (Output<0) {
+      dir = -1;
+      //Output = 0;
     }
 
-    pwr = (int) fabs(u);
+    pwr = (int) fabs(Output);
     if (pwr > 255) {
       pwr = 255;
     }
@@ -214,18 +233,17 @@ void loop() {
     lastContrUpdate = current;
 
     D_println(">pos:" + String(pos) 
-            + ", currT:" + String(currT) 
-            + ", deltaT:" + String(deltaT, 6) 
-            + ", velocity:" + String(velocity, 6) 
+            // + ", currT:" + String(currT) 
+            // + ", deltaT:" + String(deltaT, 6) 
+            // + ", velocity:" + String(velocity, 6) 
             + ", v:" + String(v) 
             + ", vFilt:" + String(vFilt) 
-            + ", vFiltAvrg:" + String(vFiltAvrg) 
+            // + ", vFiltAvrg:" + String(vFiltAvrg) 
             + ", vt:" + String(vt) 
-            + ", vtAvrg:" + String(vtAvrg)
-            + ", e:" + String(e)
-            + ", eintegral:" + String(eintegral)
-            + ", u:" + String(u)
-            + ", dir:" + String(dir)
+            // + ", vtAvrg:" + String(vtAvrg)
+            + ", Input:" + String(Input)
+            + ", Output:" + String(Output)
+            // + ", dir:" + String(dir)
             + ", pwr:" + String(pwr));
   }
   
